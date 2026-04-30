@@ -14,6 +14,7 @@ const { listRegistrations, getRegistration } = require("./services/read");
 const { updateRegistration }            = require("./services/update");
 const { deleteRegistration }            = require("./services/delete");
 const { ok, err }                       = require("./utils/response");
+const { logRequest, logResponse, logError } = require("./utils/logger");
 
 exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || "GET";
@@ -22,16 +23,21 @@ exports.handler = async (event) => {
 
   if (method === "OPTIONS") return ok("");
 
-  try {
-    if (method === "POST"   && path === "/prod/register")              return await createRegistration(event);
-    if (method === "GET"    && path === "/prod/registrations")         return await listRegistrations();
-    if (method === "GET"    && path.startsWith("/prod/registrations/")) return await getRegistration(id);
-    if (method === "PUT"    && path.startsWith("/prod/registrations/")) return await updateRegistration(id, event);
-    if (method === "DELETE" && path.startsWith("/prod/registrations/")) return await deleteRegistration(id);
+  logRequest(method, path, event.body);
 
-    return err(404, `Route not found: ${method} ${path}`);
+  let response;
+  try {
+    if (method === "POST"   && path === "/prod/register")               response = await createRegistration(event);
+    else if (method === "GET"    && path === "/prod/registrations")      response = await listRegistrations();
+    else if (method === "GET"    && path.startsWith("/prod/registrations/")) response = await getRegistration(id);
+    else if (method === "PUT"    && path.startsWith("/prod/registrations/")) response = await updateRegistration(id, event);
+    else if (method === "DELETE" && path.startsWith("/prod/registrations/")) response = await deleteRegistration(id);
+    else response = err(404, `Route not found: ${method} ${path}`);
   } catch (e) {
-    console.error("Unhandled error:", e);
-    return err(500, "Internal server error");
+    logError("Unhandled error", e);
+    response = err(500, "Internal server error");
   }
+
+  logResponse(method, path, response);
+  return response;
 };
