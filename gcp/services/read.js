@@ -12,8 +12,13 @@ async function listRegistrations() {
 
 async function getRegistration(id) {
   if (!id) return err(400, "Missing registration ID");
-  const entry = await getObject(id);
-  return ok(entry);
+  try {
+    const entry = await getObject(id);
+    return ok(entry);
+  } catch (e) {
+    if (e.message && e.message.startsWith("Registration not found")) return err(404, e.message);
+    throw e;
+  }
 }
 
 module.exports = { listRegistrations, getRegistration };
