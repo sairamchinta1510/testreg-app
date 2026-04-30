@@ -20,6 +20,16 @@ const FULL    = `\`${PROJECT}.${DATASET}.${TABLE}\``;
 // Encryption config required by org CMEK policy — passed to every query job
 const encryptionConfig = { kmsKeyName: KMS_KEY };
 
+// In-memory cache for list results — avoids a BigQuery round-trip on every page load
+const LIST_CACHE_TTL_MS = 60_000; // 60 seconds
+let listCache     = null;
+let listCacheTime = 0;
+
+function invalidateListCache() {
+  listCache     = null;
+  listCacheTime = 0;
+}
+
 // Normalise a BigQuery row: convert Date/value objects to ISO strings, drop null updatedAt
 function normalise(row) {
   const r = Object.assign({}, row);
@@ -41,6 +51,7 @@ async function getObject(id) {
 }
 
 async function putObject(id, data) {
+  invalidateListCache();
   const safeId = String(id);
 
   // Build UPDATE fields (exclude id and registeredAt — those never change)
@@ -95,6 +106,7 @@ async function putObject(id, data) {
 }
 
 async function deleteObject(id) {
+  invalidateListCache();
   await bq.query({
     query:  `DELETE FROM ${FULL} WHERE id = @id`,
     params: { id: String(id) },
@@ -104,11 +116,18 @@ async function deleteObject(id) {
 }
 
 async function listObjects() {
+  const now = Date.now();
+  if (listCache && (now - listCacheTime) < LIST_CACHE_TTL_MS) {
+    return listCache;
+  }
+  // Only fetch columns used by the viewer — omits email, phone, city, postcode, country, dob, updatedAt
   const [rows] = await bq.query({
-    query: `SELECT * FROM ${FULL} ORDER BY registeredAt DESC`,
+    query: `SELECT id, firstName, lastName, address, ssn, registeredAt FROM ${FULL} ORDER BY registeredAt DESC`,
     destinationEncryptionConfiguration: encryptionConfig
   });
-  return rows.map(normalise);
+  listCache     = rows.map(normalise);
+  listCacheTime = now;
+  return listCache;
 }
 
 module.exports = { getObject, putObject, deleteObject, listObjects };

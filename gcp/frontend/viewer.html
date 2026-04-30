@@ -45,6 +45,11 @@
     .empty-state { text-align: center; padding: 60px 20px; color: #999; }
     .empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; }
     .loading { text-align: center; padding: 40px; color: #999; font-size: 1rem; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 14px; border-top: 1px solid #f0f0f0; }
+    .pagination button { padding: 6px 14px; border: 1px solid #d0d0d0; background: white; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+    .pagination button:not(:disabled):hover { background: #f5f5f5; }
+    .page-info { font-size: .85rem; color: #666; }
     .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
     .stat-card { background: rgba(255,255,255,.2); border-radius: 10px; padding: 14px 20px; color: white; flex: 1; min-width: 130px; text-align: center; }
     .stat-card .num { font-size: 2rem; font-weight: 700; }
@@ -87,7 +92,7 @@
 
   <div class="card">
     <div class="search-bar">
-      <input type="text" id="search" placeholder="🔍 Search by name, address or SSN…" oninput="filterTable()">
+      <input type="text" id="search" placeholder="🔍 Search by name, address or SSN…" oninput="debouncedFilter()">
       <span id="count-label" style="color:#999;font-size:.85rem;white-space:nowrap;"></span>
     </div>
     <div id="table-wrap">
@@ -109,9 +114,13 @@
 </div>
 
 <script>
-const API = 'https://europe-west1-prj-d-srdl-casas-4zrs.cloudfunctions.net/testreg-gcp';
-let allData   = [];
-let deleteId  = null;
+const API       = 'https://europe-west1-prj-d-srdl-casas-4zrs.cloudfunctions.net/testreg-gcp';
+const PAGE_SIZE = 100;
+let allData      = [];
+let filteredData = [];
+let currentPage  = 1;
+let deleteId     = null;
+let searchTimer  = null;
 
 // ── Load & render ─────────────────────────────────────────────────────────────
 async function loadRegistrations() {
@@ -119,9 +128,11 @@ async function loadRegistrations() {
   try {
     const res = await fetch(`${API}/registrations`);
     if (!res.ok) throw new Error('Failed to load');
-    allData = await res.json();
+    allData      = await res.json();
+    filteredData = allData;
+    currentPage  = 1;
     updateStats(allData);
-    renderTable(allData);
+    renderTable();
   } catch (e) {
     document.getElementById('table-wrap').innerHTML = `<div class="empty-state"><h3>Could not load registrations</h3><p>${e.message}</p></div>`;
   }
@@ -129,25 +140,25 @@ async function loadRegistrations() {
 
 function updateStats(data) {
   document.getElementById('stat-total').textContent = data.length;
-  const now   = new Date();
-  const today = data.filter(r => new Date(r.registeredAt).toDateString() === now.toDateString()).length;
+  const now     = new Date();
   const weekAgo = new Date(now - 7*24*60*60*1000);
-  const week  = data.filter(r => new Date(r.registeredAt) >= weekAgo).length;
-  document.getElementById('stat-today').textContent = today;
-  document.getElementById('stat-week').textContent  = week;
+  document.getElementById('stat-today').textContent = data.filter(r => new Date(r.registeredAt).toDateString() === now.toDateString()).length;
+  document.getElementById('stat-week').textContent  = data.filter(r => new Date(r.registeredAt) >= weekAgo).length;
 }
 
-function maskSSN(ssn) {
-  return ssn ? '***-**-' + ssn.slice(-4) : '—';
-}
+function maskSSN(ssn) { return ssn ? '***-**-' + ssn.slice(-4) : '—'; }
+function formatDate(iso) { return iso ? new Date(iso).toLocaleString() : '—'; }
 
-function formatDate(iso) {
-  return iso ? new Date(iso).toLocaleString() : '—';
-}
+function renderTable() {
+  const total     = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  currentPage      = Math.min(currentPage, totalPages);
+  const start      = (currentPage - 1) * PAGE_SIZE;
+  const pageData   = filteredData.slice(start, start + PAGE_SIZE);
 
-function renderTable(data) {
-  document.getElementById('count-label').textContent = `${data.length} record${data.length !== 1 ? 's' : ''}`;
-  if (!data.length) {
+  document.getElementById('count-label').textContent = `${total} record${total !== 1 ? 's' : ''}`;
+
+  if (!total) {
     document.getElementById('table-wrap').innerHTML = `
       <div class="empty-state">
         <h3>No registrations found</h3>
@@ -155,7 +166,8 @@ function renderTable(data) {
       </div>`;
     return;
   }
-  const rows = data.map(r => `
+
+  const rows = pageData.map(r => `
     <tr id="row-${r.id}">
       <td data-label="ID"><span class="tag">#${String(r.id).slice(-6)}</span></td>
       <td data-label="First Name" id="fn-${r.id}">${esc(r.firstName)}</td>
@@ -169,22 +181,38 @@ function renderTable(data) {
       </td>
     </tr>`).join('');
 
+  const pagination = totalPages > 1 ? `
+    <div class="pagination">
+      <button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>
+      <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+      <button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next ›</button>
+    </div>` : '';
+
   document.getElementById('table-wrap').innerHTML = `
     <table>
       <thead><tr>
         <th>ID</th><th>First Name</th><th>Last Name</th><th>Address</th><th>SSN</th><th>Registered</th><th>Actions</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table>`;
+    </table>
+    ${pagination}`;
 }
 
-// ── Filter ────────────────────────────────────────────────────────────────────
+function goPage(p) { currentPage = p; renderTable(); window.scrollTo(0,0); }
+
+// ── Filter (debounced) ────────────────────────────────────────────────────────
+function debouncedFilter() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(filterTable, 200);
+}
+
 function filterTable() {
   const q = document.getElementById('search').value.toLowerCase();
-  const filtered = allData.filter(r =>
-    [r.firstName, r.lastName, r.address, r.ssn].some(f => f && f.toLowerCase().includes(q))
-  );
-  renderTable(filtered);
+  filteredData = q
+    ? allData.filter(r => [r.firstName, r.lastName, r.address, r.ssn].some(f => f && f.toLowerCase().includes(q)))
+    : allData;
+  currentPage = 1;
+  renderTable();
 }
 
 // ── Inline Edit ───────────────────────────────────────────────────────────────
@@ -202,7 +230,7 @@ function startEdit(id) {
     <button class="btn btn-sm" style="background:#f0f0f0" onclick="cancelEdit('${id}')">✕ Cancel</button>`;
 }
 
-function cancelEdit(id) { renderTable(allData.filter(r => filterTable.q ? r.firstName.toLowerCase().includes(filterTable.q) : true)); loadRegistrations(); }
+function cancelEdit(id) { loadRegistrations(); }
 
 async function saveEdit(id) {
   const btn = document.querySelector(`#row-${id} .btn-success`);
