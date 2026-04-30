@@ -57,8 +57,12 @@ async function deleteObject(id) {
 // Returns all registrations from index.json (newest first).
 // Falls back to scanning individual files on first run, then writes the index.
 async function listObjects() {
-  const index = await getIndex();
-  if (index !== null) return index;
+  const bucket = storage.bucket(BUCKET);
+  const [exists] = await bucket.file(INDEX_KEY).exists();
+  if (exists) {
+    const [contents] = await bucket.file(INDEX_KEY).download();
+    return JSON.parse(contents.toString());
+  }
 
   // Index doesn't exist yet — build it from individual files
   const [files] = await storage.bucket(BUCKET).getFiles({ prefix: PREFIX });
@@ -78,7 +82,7 @@ async function getIndex() {
     const [contents] = await storage.bucket(BUCKET).file(INDEX_KEY).download();
     return JSON.parse(contents.toString());
   } catch (error) {
-    if (error.code === 404) return null;
+    if (error.code === 404) return [];
     throw error;
   }
 }
