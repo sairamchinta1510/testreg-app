@@ -33,6 +33,7 @@ async function getObject(id) {
   const [rows] = await bq.query({
     query:  `SELECT * FROM ${FULL} WHERE id = @id LIMIT 1`,
     params: { id: String(id) },
+    types:  { id: "STRING" },
     destinationEncryptionConfiguration: encryptionConfig
   });
   if (!rows.length) throw new Error(`Registration not found: ${id}`);
@@ -46,11 +47,16 @@ async function putObject(id, data) {
   const fields = ["firstName","lastName","email","phone","address","city","postcode","country","dob","ssn","updatedAt"];
   const setClause = fields.map(k => `${k} = @${k}`).join(", ");
   const params = { id: safeId };
-  for (const k of fields) params[k] = data[k] ?? null;
+  const types  = { id: "STRING" };
+  for (const k of fields) {
+    params[k] = data[k] ?? null;
+    types[k]  = "STRING";
+  }
 
   const [job] = await bq.createQueryJob({
     query:  `UPDATE ${FULL} SET ${setClause} WHERE id = @id`,
     params,
+    types,
     destinationEncryptionConfiguration: encryptionConfig
   });
   await job.getQueryResults();
@@ -81,6 +87,7 @@ async function deleteObject(id) {
   await bq.query({
     query:  `DELETE FROM ${FULL} WHERE id = @id`,
     params: { id: String(id) },
+    types:  { id: "STRING" },
     destinationEncryptionConfiguration: encryptionConfig
   });
 }
