@@ -29,7 +29,7 @@ functions.http("handler", async (req, res) => {
 
   const method = req.method;
   const path   = req.path;
-  const id     = path.startsWith("/registrations/") ? path.split("/").pop() : null;
+  const id     = path.startsWith("/registrations/") ? (path.split("/").pop() || null) : null;
 
   if (method === "OPTIONS") {
     res.status(204).send("");
@@ -38,7 +38,7 @@ functions.http("handler", async (req, res) => {
 
   // Normalise to Lambda-event shape so all service files work unchanged
   const event = {
-    body:           req.body ? JSON.stringify(req.body) : null,
+    body:           req.rawBody ? req.rawBody.toString() : (req.body ? JSON.stringify(req.body) : null),
     requestContext: { http: { method } },
     rawPath:        path
   };
