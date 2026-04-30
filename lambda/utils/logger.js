@@ -8,9 +8,10 @@ const REDACTED_FIELDS = ["ssn"];
 
 function redact(obj) {
   if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(redact);
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) =>
-      REDACTED_FIELDS.includes(k) ? [k, "***REDACTED***"] : [k, v]
+      REDACTED_FIELDS.includes(k) ? [k, "***REDACTED***"] : [k, redact(v)]
     )
   );
 }
