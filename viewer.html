@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+    header { text-align: center; color: white; margin-bottom: 24px; }
+    header h1 { font-size: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+    header p  { opacity: .9; margin-top: 6px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .btn-primary  { background: linear-gradient(135deg,#667eea,#764ba2); color: white; }
+    .btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,.4); }
+    .btn-success  { background: #28a745; color: white; }
+    .btn-success:hover  { background: #218838; }
+    .btn-danger   { background: #dc3545; color: white; }
+    .btn-danger:hover   { background: #c82333; }
+    .btn-warning  { background: #ffc107; color: #333; }
+    .btn-warning:hover  { background: #e0a800; }
+    .btn-sm { padding: 6px 12px; font-size: .8rem; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; transform: none !important; }
+    .card { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,.15); overflow: hidden; }
+    .banner { display: none; padding: 12px 18px; font-weight: 600; font-size: .9rem; border-radius: 8px; margin-bottom: 16px; }
+    .banner.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    .banner.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+    .search-bar { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; gap: 10px; align-items: center; }
+    .search-bar input { flex: 1; padding: 8px 14px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: .95rem; }
+    .search-bar input:focus { outline: none; border-color: #667eea; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f8f9fa; }
+    th { padding: 12px 14px; text-align: left; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: #666; border-bottom: 2px solid #e9ecef; white-space: nowrap; }
+    td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+    tr.editing td { background: #fffde7; }
+    .ssn-cell { font-family: monospace; letter-spacing: .05em; }
+    .date-cell { font-size: .82rem; color: #888; white-space: nowrap; }
+    .actions { display: flex; gap: 6px; white-space: nowrap; }
+    .edit-input { width: 100%; padding: 5px 8px; border: 2px solid #667eea; border-radius: 6px; font-size: .9rem; font-family: inherit; }
+    .edit-input:focus { outline: none; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; }
+    .loading { text-align: center; padding: 40px; color: #999; font-size: 1rem; }
+    .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card { background: rgba(255,255,255,.2); border-radius: 10px; padding: 14px 20px; color: white; flex: 1; min-width: 130px; text-align: center; }
+    .stat-card .num { font-size: 2rem; font-weight: 700; }
+    .stat-card .lbl { font-size: .8rem; opacity: .85; margin-top: 2px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 15px; padding: 30px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+    .modal h3 { margin-bottom: 16px; font-size: 1.2rem; }
+    .modal p  { color: #666; margin-bottom: 24px; line-height: 1.5; }
+    .modal .actions { justify-content: flex-end; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: .75rem; font-weight: 600; background: #e8eaf6; color: #3949ab; }
+    @media(max-width:768px){
+      table, thead, tbody, th, td, tr { display: block; }
+      thead tr { display: none; }
+      td { padding: 6px 14px; display: flex; gap: 8px; }
+      td::before { content: attr(data-label); font-weight: 600; min-width: 90px; color: #555; }
+      .actions { padding: 10px 14px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📋 Registration Viewer</h1>
+    <p>View, edit and manage all registrations</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">Total Registrations</div></div>
+    <div class="stat-card"><div class="num" id="stat-today">—</div><div class="lbl">Registered Today</div></div>
+    <div class="stat-card"><div class="num" id="stat-week">—</div><div class="lbl">This Week</div></div>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <div class="toolbar">
+    <a href="/register.html" class="btn btn-primary">+ New Registration</a>
+    <button class="btn btn-primary" onclick="loadRegistrations()">↻ Refresh</button>
+  </div>
+
+  <div class="card">
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="🔍 Search by name, address or SSN…" oninput="filterTable()">
+      <span id="count-label" style="color:#999;font-size:.85rem;white-space:nowrap;"></span>
+    </div>
+    <div id="table-wrap">
+      <div class="loading">Loading registrations…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>🗑️ Delete Registration</h3>
+    <p id="delete-msg">Are you sure you want to delete this registration? This cannot be undone.</p>
+    <div class="actions">
+      <button class="btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://x7g2e51ala.execute-api.eu-west-1.amazonaws.com/prod';
+let allData   = [];
+let deleteId  = null;
+
+// ── Load & render ─────────────────────────────────────────────────────────────
+async function loadRegistrations() {
+  document.getElementById('table-wrap').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/registrations`);
+    if (!res.ok) throw new Error('Failed to load');
+    allData = await res.json();
+    updateStats(allData);
+    renderTable(allData);
+  } catch (e) {
+    document.getElementById('table-wrap').innerHTML = `<div class="empty-state"><h3>Could not load registrations</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function updateStats(data) {
+  document.getElementById('stat-total').textContent = data.length;
+  const now   = new Date();
+  const today = data.filter(r => new Date(r.registeredAt).toDateString() === now.toDateString()).length;
+  const weekAgo = new Date(now - 7*24*60*60*1000);
+  const week  = data.filter(r => new Date(r.registeredAt) >= weekAgo).length;
+  document.getElementById('stat-today').textContent = today;
+  document.getElementById('stat-week').textContent  = week;
+}
+
+function maskSSN(ssn) {
+  return ssn ? '***-**-' + ssn.slice(-4) : '—';
+}
+
+function formatDate(iso) {
+  return iso ? new Date(iso).toLocaleString() : '—';
+}
+
+function renderTable(data) {
+  document.getElementById('count-label').textContent = `${data.length} record${data.length !== 1 ? 's' : ''}`;
+  if (!data.length) {
+    document.getElementById('table-wrap').innerHTML = `
+      <div class="empty-state">
+        <h3>No registrations found</h3>
+        <p>Use the button above to add the first one.</p>
+      </div>`;
+    return;
+  }
+  const rows = data.map(r => `
+    <tr id="row-${r.id}">
+      <td data-label="ID"><span class="tag">#${String(r.id).slice(-6)}</span></td>
+      <td data-label="First Name" id="fn-${r.id}">${esc(r.firstName)}</td>
+      <td data-label="Last Name"  id="ln-${r.id}">${esc(r.lastName)}</td>
+      <td data-label="Address"    id="ad-${r.id}">${esc(r.address)}</td>
+      <td data-label="SSN" class="ssn-cell" id="ssn-${r.id}">${maskSSN(r.ssn)}</td>
+      <td data-label="Registered" class="date-cell">${formatDate(r.registeredAt)}</td>
+      <td class="actions">
+        <button class="btn btn-warning btn-sm" onclick="startEdit('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-danger  btn-sm" onclick="openDeleteModal('${r.id}', '${esc(r.firstName)} ${esc(r.lastName)}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('table-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>ID</th><th>First Name</th><th>Last Name</th><th>Address</th><th>SSN</th><th>Registered</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+function filterTable() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = allData.filter(r =>
+    [r.firstName, r.lastName, r.address, r.ssn].some(f => f && f.toLowerCase().includes(q))
+  );
+  renderTable(filtered);
+}
+
+// ── Inline Edit ───────────────────────────────────────────────────────────────
+function startEdit(id) {
+  const rec = allData.find(r => String(r.id) === String(id));
+  if (!rec) return;
+  const row = document.getElementById(`row-${id}`);
+  row.classList.add('editing');
+  document.getElementById(`fn-${id}`).innerHTML  = `<input class="edit-input" id="edt-fn-${id}"  value="${esc(rec.firstName)}">`;
+  document.getElementById(`ln-${id}`).innerHTML  = `<input class="edit-input" id="edt-ln-${id}"  value="${esc(rec.lastName)}">`;
+  document.getElementById(`ad-${id}`).innerHTML  = `<input class="edit-input" id="edt-ad-${id}"  value="${esc(rec.address)}">`;
+  document.getElementById(`ssn-${id}`).innerHTML = `<input class="edit-input" id="edt-ssn-${id}" value="${esc(rec.ssn)}" placeholder="XXX-XX-XXXX">`;
+  row.querySelector('.actions').innerHTML = `
+    <button class="btn btn-success btn-sm" onclick="saveEdit('${id}')">💾 Save</button>
+    <button class="btn btn-sm" style="background:#f0f0f0" onclick="cancelEdit('${id}')">✕ Cancel</button>`;
+}
+
+function cancelEdit(id) { renderTable(allData.filter(r => filterTable.q ? r.firstName.toLowerCase().includes(filterTable.q) : true)); loadRegistrations(); }
+
+async function saveEdit(id) {
+  const btn = document.querySelector(`#row-${id} .btn-success`);
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const payload = {
+    firstName: document.getElementById(`edt-fn-${id}`).value.trim(),
+    lastName:  document.getElementById(`edt-ln-${id}`).value.trim(),
+    address:   document.getElementById(`edt-ad-${id}`).value.trim(),
+    ssn:       document.getElementById(`edt-ssn-${id}`).value.trim()
+  };
+  if (!payload.firstName || !payload.lastName || !payload.address || !payload.ssn) {
+    showBanner('error', 'All fields are required.'); btn.disabled = false; btn.textContent = '💾 Save'; return;
+  }
+  try {
+    const res = await fetch(`${API}/registrations/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showBanner('success', `Registration #${String(id).slice(-6)} updated successfully.`);
+    await loadRegistrations();
+  } catch (e) {
+    showBanner('error', e.message || 'Update failed.');
+    btn.disabled = false; btn.textContent = '💾 Save';
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function openDeleteModal(id, name) {
+  deleteId = id;
+  document.getElementById('delete-msg').textContent = `Delete registration for "${name}"? This cannot be undone.`;
+  document.getElementById('delete-modal').classList.add('open');
+}
+function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('open'); deleteId = null; }
+
+async function confirmDelete() {
+  if (!deleteId) return;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const res = await fetch(`${API}/registrations/${deleteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    showBanner('success', `Registration deleted successfully.`);
+    closeDeleteModal();
+    await loadRegistrations();
+  } catch (e) {
+    showBanner('error', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showBanner(type, msg) {
+  const b = document.getElementById('banner');
+  b.className = 'banner ' + type;
+  b.textContent = msg;
+  setTimeout(() => { b.className = 'banner'; }, 5000);
+}
+
+loadRegistrations();
+</script>
+</body>
+</html>
