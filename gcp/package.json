@@ -1,0 +1,11 @@
+{
+  "name": "testreg-save-gcp",
+  "version": "1.0.0",
+  "description": "testreg-app Cloud Function for GCP",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "@google-cloud/storage": "^7.7.0"
+  }
+}
