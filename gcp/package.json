@@ -5,6 +5,7 @@
   "main": "index.js",
   "engines": { "node": "20" },
   "dependencies": {
+    "@google-cloud/bigquery": "^7.3.0",
     "@google-cloud/functions-framework": "^3.3.0",
     "@google-cloud/storage": "^7.7.0"
   }
