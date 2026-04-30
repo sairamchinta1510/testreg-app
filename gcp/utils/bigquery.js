@@ -64,8 +64,8 @@ async function putObject(id, data) {
   const affected = parseInt(meta?.statistics?.query?.numDmlAffectedRows || "0", 10);
 
   if (affected === 0) {
-    // New record — INSERT via streaming (writes to existing encrypted table, no CMEK needed)
-    await bq.dataset(DATASET).table(TABLE).insert([{
+    // New record — use DML INSERT (streaming insert would block UPDATE/DELETE on buffered rows)
+    const insertParams = {
       id:           safeId,
       firstName:    data.firstName    ?? null,
       lastName:     data.lastName     ?? null,
@@ -79,7 +79,18 @@ async function putObject(id, data) {
       ssn:          data.ssn          ?? null,
       registeredAt: data.registeredAt ?? new Date().toISOString(),
       updatedAt:    data.updatedAt    ?? null
-    }]);
+    };
+    const insertTypes = {};
+    for (const k of Object.keys(insertParams)) insertTypes[k] = "STRING";
+
+    const [insertJob] = await bq.createQueryJob({
+      query: `INSERT INTO ${FULL} (id,firstName,lastName,email,phone,address,city,postcode,country,dob,ssn,registeredAt,updatedAt)
+              VALUES (@id,@firstName,@lastName,@email,@phone,@address,@city,@postcode,@country,@dob,@ssn,@registeredAt,@updatedAt)`,
+      params: insertParams,
+      types:  insertTypes,
+      destinationEncryptionConfiguration: encryptionConfig
+    });
+    await insertJob.getQueryResults();
   }
 }
 
