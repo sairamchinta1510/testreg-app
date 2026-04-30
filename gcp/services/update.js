@@ -3,7 +3,7 @@
  * Body: { firstName?, lastName?, address?, ssn? }
  * Returns: { success, entry }
  */
-const { getObject, putObject } = require("../utils/gcs");
+const { getObject, putObject } = require("../utils/bigquery");
 const { ok, err }              = require("../utils/response");
 
 async function updateRegistration(id, event) {

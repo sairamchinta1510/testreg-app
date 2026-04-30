@@ -1,13 +1,24 @@
 /**
  * bigquery.js — BigQuery CRUD for registrations
  * Same 4-function interface as gcs.js so all service files work unchanged.
+ *
+ * Env vars:
+ *   GCP_PROJECT   — GCP project ID (default: prj-d-srdl-casas-4zrs)
+ *   GCP_KMS_KEY   — full KMS key resource name required by org CMEK policy
  */
 const { BigQuery } = require("@google-cloud/bigquery");
 
-const bq      = new BigQuery({ projectId: process.env.GCP_PROJECT || "prj-d-srdl-casas-4zrs" });
+const PROJECT = process.env.GCP_PROJECT || "prj-d-srdl-casas-4zrs";
+const KMS_KEY = process.env.GCP_KMS_KEY ||
+  "projects/prj-d-srdl-casas-4zrs/locations/europe-west1/keyRings/casas-github/cryptoKeys/casas-repo-sync";
+
+const bq      = new BigQuery({ projectId: PROJECT });
 const DATASET = "testreg";
 const TABLE   = "registrations";
-const FULL    = `\`${process.env.GCP_PROJECT || "prj-d-srdl-casas-4zrs"}.${DATASET}.${TABLE}\``;
+const FULL    = `\`${PROJECT}.${DATASET}.${TABLE}\``;
+
+// Encryption config required by org CMEK policy — passed to every query job
+const encryptionConfig = { kmsKeyName: KMS_KEY };
 
 // Normalise a BigQuery row: convert Date/value objects to ISO strings, drop null updatedAt
 function normalise(row) {
@@ -20,8 +31,9 @@ function normalise(row) {
 
 async function getObject(id) {
   const [rows] = await bq.query({
-    query:  `SELECT * FROM \`prj-d-srdl-casas-4zrs.testreg.registrations\` WHERE id = @id LIMIT 1`,
-    params: { id: String(id) }
+    query:  `SELECT * FROM ${FULL} WHERE id = @id LIMIT 1`,
+    params: { id: String(id) },
+    destinationEncryptionConfiguration: encryptionConfig
   });
   if (!rows.length) throw new Error(`Registration not found: ${id}`);
   return normalise(rows[0]);
@@ -37,15 +49,16 @@ async function putObject(id, data) {
   for (const k of fields) params[k] = data[k] ?? null;
 
   const [job] = await bq.createQueryJob({
-    query:  `UPDATE \`prj-d-srdl-casas-4zrs.testreg.registrations\` SET ${setClause} WHERE id = @id`,
-    params
+    query:  `UPDATE ${FULL} SET ${setClause} WHERE id = @id`,
+    params,
+    destinationEncryptionConfiguration: encryptionConfig
   });
   await job.getQueryResults();
   const [meta] = await job.getMetadata();
   const affected = parseInt(meta?.statistics?.query?.numDmlAffectedRows || "0", 10);
 
   if (affected === 0) {
-    // New record — INSERT
+    // New record — INSERT via streaming (writes to existing encrypted table, no CMEK needed)
     await bq.dataset(DATASET).table(TABLE).insert([{
       id:           safeId,
       firstName:    data.firstName    ?? null,
@@ -66,14 +79,16 @@ async function putObject(id, data) {
 
 async function deleteObject(id) {
   await bq.query({
-    query:  `DELETE FROM \`prj-d-srdl-casas-4zrs.testreg.registrations\` WHERE id = @id`,
-    params: { id: String(id) }
+    query:  `DELETE FROM ${FULL} WHERE id = @id`,
+    params: { id: String(id) },
+    destinationEncryptionConfiguration: encryptionConfig
   });
 }
 
 async function listObjects() {
   const [rows] = await bq.query({
-    query: `SELECT * FROM \`prj-d-srdl-casas-4zrs.testreg.registrations\` ORDER BY registeredAt DESC`
+    query: `SELECT * FROM ${FULL} ORDER BY registeredAt DESC`,
+    destinationEncryptionConfiguration: encryptionConfig
   });
   return rows.map(normalise);
 }

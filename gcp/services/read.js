@@ -2,7 +2,7 @@
  * READ ALL — GET /registrations
  * READ ONE — GET /registrations/{id}
  */
-const { listObjects, getObject } = require("../utils/gcs");
+const { listObjects, getObject } = require("../utils/bigquery");
 const { ok, err }                = require("../utils/response");
 
 async function listRegistrations() {

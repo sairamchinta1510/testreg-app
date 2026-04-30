@@ -2,7 +2,7 @@
  * DELETE — DELETE /registrations/{id}
  * Returns: { success, message }
  */
-const { deleteObject } = require("../utils/gcs");
+const { deleteObject } = require("../utils/bigquery");
 const { ok, err }      = require("../utils/response");
 
 async function deleteRegistration(id) {

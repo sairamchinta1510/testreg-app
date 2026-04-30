@@ -3,7 +3,7 @@
  * Body: { firstName, lastName, address, ssn }
  * Returns: { success, id, message }
  */
-const { putObject } = require("../utils/gcs");
+const { putObject } = require("../utils/bigquery");
 const { ok, err }   = require("../utils/response");
 
 async function createRegistration(event) {
