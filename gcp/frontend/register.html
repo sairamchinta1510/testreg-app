@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Registration</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      color: white;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    header p {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    .form-card {
+      background: white;
+      border-radius: 15px;
+      padding: 35px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    /* Banner (success / error / warning) */
+    .banner {
+      display: none;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .banner.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    .banner.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+    .banner.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; display: block; }
+
+    /* Field groups */
+    .field-group {
+      margin-bottom: 22px;
+    }
+
+    .field-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .field-group label .sensitive-badge {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #888;
+      margin-left: 6px;
+    }
+
+    .field-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e1e5e9;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: all 0.3s ease;
+      background: #fafbfc;
+    }
+
+    .field-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: white;
+    }
+
+    .field-group input.invalid {
+      border-color: #e74c3c;
+      background: #fff5f5;
+    }
+
+    .field-group input.invalid:focus {
+      box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+    }
+
+    .field-error {
+      display: none;
+      color: #e74c3c;
+      font-size: 0.82rem;
+      margin-top: 5px;
+    }
+
+    .field-error.visible { display: block; }
+
+    /* Submit button */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .submit-btn:active { transform: translateY(0); }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 25px;
+      color: white;
+      opacity: 0.8;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 20px 15px; }
+      .form-card { padding: 25px 20px; }
+      header h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>User Registration</h1>
+      <p>Fill in the form below to register</p>
+    </header>
+
+    <div class="form-card">
+      <div id="banner" class="banner"></div>
+
+      <form id="registration-form" novalidate>
+
+        <div class="field-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName"
+                 placeholder="e.g. Jane" maxlength="50" autocomplete="given-name">
+          <span class="field-error" id="firstName-error"></span>
+        </div>
+
+        <div class="field-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName"
+                 placeholder="e.g. Doe" maxlength="50" autocomplete="family-name">
+          <span class="field-error" id="lastName-error"></span>
+        </div>
+
+        <div class="field-group">
+          <label for="address">Address</label>
+          <input type="text" id="address" name="address"
+                 placeholder="e.g. 123 Main St, Springfield" autocomplete="street-address">
+          <span class="field-error" id="address-error"></span>
+        </div>
+
+        <div class="field-group">
+          <label for="ssn">
+            Social Security Number
+            <span class="sensitive-badge">🔒 sensitive</span>
+          </label>
+          <input type="text" id="ssn" name="ssn"
+                 placeholder="XXX-XX-XXXX" maxlength="11" autocomplete="off"
+                 inputmode="numeric">
+          <span class="field-error" id="ssn-error"></span>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">Register</button>
+      </form>
+    </div>
+
+    <footer>
+      <p>Registrations are saved securely to the cloud.</p>
+    </footer>
+  </div>
+
+  <script>
+    const API_URL = 'https://europe-west1-prj-d-srdl-casas-4zrs.cloudfunctions.net/testreg-gcp/register';
+
+    // ── DOM refs ──────────────────────────────────────────────────────────
+    const form       = document.getElementById('registration-form');
+    const submitBtn  = document.getElementById('submit-btn');
+    const banner     = document.getElementById('banner');
+
+    // ── SSN auto-formatter ────────────────────────────────────────────────
+    document.getElementById('ssn').addEventListener('input', function (e) {
+      let val = e.target.value.replace(/\D/g, ''); // digits only
+      if (val.length > 9) val = val.slice(0, 9);
+      if (val.length > 5)      val = val.slice(0,3) + '-' + val.slice(3,5) + '-' + val.slice(5);
+      else if (val.length > 3) val = val.slice(0,3) + '-' + val.slice(3);
+      e.target.value = val;
+    });
+
+    // ── Validation ────────────────────────────────────────────────────────
+    const NAME_RE = /^[A-Za-z\-']+$/;
+    const SSN_RE  = /^\d{3}-\d{2}-\d{4}$/;
+
+    function validateField(id, value) {
+      switch (id) {
+        case 'firstName':
+        case 'lastName':
+          if (!value)                   return 'This field is required.';
+          if (!NAME_RE.test(value))     return 'Only letters, hyphens, and apostrophes allowed.';
+          if (value.length > 50)        return 'Maximum 50 characters.';
+          return null;
+        case 'address':
+          if (!value)                   return 'This field is required.';
+          if (value.length < 5)         return 'Address must be at least 5 characters.';
+          return null;
+        case 'ssn':
+          if (!value)                   return 'This field is required.';
+          if (!SSN_RE.test(value))      return 'Format must be XXX-XX-XXXX (digits only).';
+          return null;
+      }
+      return null;
+    }
+
+    function setFieldError(id, message) {
+      const input = document.getElementById(id);
+      const errEl = document.getElementById(id + '-error');
+      if (message) {
+        input.classList.add('invalid');
+        errEl.textContent = message;
+        errEl.classList.add('visible');
+      } else {
+        input.classList.remove('invalid');
+        errEl.textContent = '';
+        errEl.classList.remove('visible');
+      }
+    }
+
+    // Clear field errors on change
+    ['firstName','lastName','address','ssn'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => setFieldError(id, null));
+    });
+
+    // ── Banner helper ─────────────────────────────────────────────────────
+    function showBanner(type, message) {
+      banner.className = 'banner ' + type;
+      banner.textContent = message;
+    }
+
+    function hideBanner() {
+      banner.className = 'banner';
+      banner.textContent = '';
+    }
+
+    // ── Form submit handler ───────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideBanner();
+
+      const fields = ['firstName', 'lastName', 'address', 'ssn'];
+      const values = {};
+      let hasErrors = false;
+
+      fields.forEach(id => {
+        const val = document.getElementById(id).value.trim();
+        values[id] = val;
+        const err = validateField(id, val);
+        if (err) {
+          setFieldError(id, err);
+          hasErrors = true;
+        } else {
+          setFieldError(id, null);
+        }
+      });
+
+      if (hasErrors) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Server error');
+        showBanner('success', `Registered! Entry #${data.id} saved to cloud.`);
+        form.reset();
+      } catch (err) {
+        showBanner('error', err.message || 'Submission failed. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Register';
+      }
+    });
+  </script>
+</body>
+</html>
